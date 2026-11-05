@@ -6,8 +6,8 @@
 ```
 cp .env.example .env      # แล้วแก้รหัสผ่าน
 docker compose up -d --build --wait
-./scripts/smoke.sh http://localhost:8080
-# เปิด http://localhost:8080   หยุด: docker compose down   (ล้างข้อมูล: down -v)
+docker compose exec -T app python scripts/smoke.py http://localhost:8000
+# เปิด http://localhost:8081  หยุด: docker compose down   (ล้างข้อมูล: down -v)
 ```
 ทดสอบหน่วย: `pip install -r requirements.txt && python -m pytest -q`
 
@@ -17,7 +17,7 @@ docker compose up -d --build --wait
 | R1 สมัคร/เข้าสู่ระบบ | รหัสผ่านผิดแจ้งข้อความกลางๆ ไม่บอกว่าผิดช่องใด | `/api/login` | test_login_wrong_password_generic |
 | R2 เห็นเฉพาะข้อมูลตนเอง | ยกเลิก/จองให้สัตว์ของผู้อื่นไม่ได้ (404) | `current_user`, owner check | test_cannot_touch_others |
 | R3 จองนัด | จองสำเร็จได้รหัส BK-xxxxx และเห็นในรายการ | `POST /api/bookings` | test_book_success_and_listed |
-| R4 ไม่จองซ้ำ | ช่วงเวลาเดียวกันจองได้ 1 คน อีกคนได้ 409 + เวลาทดแทน | partial unique index | test_double_booking..., smoke.sh |
+| R4 ไม่จองซ้ำ | ช่วงเวลาเดียวกันจองได้ 1 คน อีกคนได้ 409 + เวลาทดแทน | partial unique index | test_double_booking..., smoke.py |
 | R5 ยกเลิกแล้วคืนเวลา | จองช่วงนั้นใหม่ได้ | `DELETE /api/bookings/{id}` | test_cancel_frees_slot |
 | R6 ตรวจ Input | เวลา/วันที่ผิดถูกปฏิเสธ | validation | test_invalid_input |
 | R7 ส่งมอบอัตโนมัติ | Build → Test → Deploy → Smoke | `Jenkinsfile` | Jenkins build log |
