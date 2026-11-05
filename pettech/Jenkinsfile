@@ -1,0 +1,13 @@
+pipeline {
+  agent any
+  environment { COMPOSE_PROJECT_NAME = 'pettech' }
+  stages {
+    stage('Build')      { steps { sh 'docker build -t pettech-app:${BUILD_NUMBER} .' } }
+    stage('Unit Test')  { steps { sh 'docker run --rm pettech-app:${BUILD_NUMBER} python -m pytest -q' } }
+    stage('Deploy')     { steps { sh 'cp -n .env.example .env || true; docker compose up -d --build --wait' } }
+    stage('Smoke Test') { steps { sh './scripts/smoke.sh http://localhost:${APP_PORT:-8080}' } }
+  }
+  post {
+    failure { sh 'docker compose logs --tail=50 || true; docker compose down || true' }
+  }
+}

@@ -1,0 +1,47 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PetTech จองนัดสัตวแพทย์</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:16px;background:#f7f7f5;color:#222}
+section{background:#fff;border-radius:10px;padding:14px;margin:12px 0;box-shadow:0 1px 3px #0002}
+input,select,button{font:inherit;padding:8px;margin:4px 4px 4px 0}button{cursor:pointer}
+.slots{display:flex;flex-wrap:wrap;gap:6px}.slots button:disabled{background:#ddd;color:#888;cursor:not-allowed}
+#msg{padding:8px;border-radius:6px}.ok{background:#e3f6e8}.err{background:#fde4e4}
+li{margin:4px 0}
+</style></head><body>
+<h1>🐾 PetTech: จองนัดสัตวแพทย์</h1><p id="msg"></p>
+<section id="auth"><h3>เข้าสู่ระบบ / สมัครสมาชิก</h3>
+<input id="email" placeholder="อีเมล"><input id="pw" type="password" placeholder="รหัสผ่าน (6+ ตัว)">
+<button id="login">เข้าสู่ระบบ</button><button id="reg">สมัครสมาชิก</button></section>
+<div id="main" hidden>
+<section><h3>สัตว์เลี้ยงของฉัน</h3><ul id="pets"></ul>
+<input id="pname" placeholder="ชื่อ"><input id="pspecies" placeholder="ชนิด เช่น สุนัข"><button id="addpet">เพิ่ม</button></section>
+<section><h3>จองนัดหมาย</h3>
+<select id="petsel"></select><select id="svc"></select><input id="date" type="date">
+<div class="slots" id="slots"></div></section>
+<section><h3>นัดหมายของฉัน</h3><ul id="bks"></ul></section>
+<button id="logout">ออกจากระบบ</button></div>
+<script>
+let token=localStorage.getItem('t');const $=i=>document.getElementById(i);
+const say=(t,bad)=>{$('msg').textContent=t;$('msg').className=t?(bad?'err':'ok'):''};
+async function api(p,o={}){const r=await fetch('/api'+p,{...o,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})}});
+let d=null;try{d=await r.json()}catch(e){}if(!r.ok)throw{status:r.status,d};return d}
+const errText=e=>{const x=e.d&&e.d.detail;return typeof x==='string'?x:(x&&x.message)||(Array.isArray(x)?'ข้อมูลไม่ถูกต้อง':'เกิดข้อผิดพลาด')};
+const cred=()=>JSON.stringify({email:$('email').value,password:$('pw').value});
+$('reg').onclick=async()=>{try{await api('/register',{method:'POST',body:cred()});say('สมัครสำเร็จ กรุณาเข้าสู่ระบบ')}catch(e){say(errText(e),1)}};
+$('login').onclick=async()=>{try{token=(await api('/login',{method:'POST',body:cred()})).token;localStorage.setItem('t',token);say('');init()}catch(e){say(errText(e),1)}};
+$('logout').onclick=()=>{token=null;localStorage.removeItem('t');location.reload()};
+async function loadPets(){const p=await api('/pets');$('pets').innerHTML=p.map(x=>`<li>${x.name} (${x.species})</li>`).join('')||'<li>ยังไม่มีสัตว์เลี้ยง</li>';
+$('petsel').innerHTML=p.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}
+$('addpet').onclick=async()=>{try{await api('/pets',{method:'POST',body:JSON.stringify({name:$('pname').value,species:$('pspecies').value})});$('pname').value='';loadPets()}catch(e){say(errText(e),1)}};
+async function loadSlots(){if(!$('date').value)return;const s=await api('/slots?date='+$('date').value);
+$('slots').innerHTML='';s.forEach(x=>{const b=document.createElement('button');b.textContent=x.time;b.disabled=!x.available;b.onclick=()=>book(x.time);$('slots').append(b)})}
+async function book(time){try{const r=await api('/bookings',{method:'POST',body:JSON.stringify({pet_id:+$('petsel').value,date:$('date').value,time,service:$('svc').value})});
+say('จองสำเร็จ รหัสนัดหมาย '+r.code)}catch(e){const d=e.d&&e.d.detail;say(e.status===409?`${d.message} ช่วงเวลาที่ว่าง: ${d.alternatives.join(', ')||'ไม่มี'}`:errText(e),1)}loadSlots();loadBks()}
+async function loadBks(){const b=await api('/bookings');$('bks').innerHTML=b.map(x=>`<li>${x.code} · ${x.pet} · ${x.service} · ${x.slot.replace('T',' ').slice(0,16)} · ${x.status}
+${x.status==='booked'?`<button onclick="cancelBk(${x.id})">ยกเลิก</button>`:''}</li>`).join('')||'<li>ยังไม่มีนัดหมาย</li>'}
+async function cancelBk(id){await api('/bookings/'+id,{method:'DELETE'});say('ยกเลิกนัดแล้ว');loadBks();loadSlots()}
+$('date').onchange=loadSlots;
+async function init(){if(!token)return;try{$('svc').innerHTML=(await api('/services')).map(s=>`<option>${s}</option>`).join('');
+await loadPets();await loadBks();$('auth').hidden=true;$('main').hidden=false}catch(e){token=null;localStorage.removeItem('t')}}
+init();
+</script></body></html>
