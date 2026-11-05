@@ -1,47 +1,208 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PetTech จองนัดสัตวแพทย์</title>
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PetTech · จองนัดสัตวแพทย์</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:16px;background:#f7f7f5;color:#222}
-section{background:#fff;border-radius:10px;padding:14px;margin:12px 0;box-shadow:0 1px 3px #0002}
-input,select,button{font:inherit;padding:8px;margin:4px 4px 4px 0}button{cursor:pointer}
-.slots{display:flex;flex-wrap:wrap;gap:6px}.slots button:disabled{background:#ddd;color:#888;cursor:not-allowed}
-#msg{padding:8px;border-radius:6px}.ok{background:#e3f6e8}.err{background:#fde4e4}
-li{margin:4px 0}
-</style></head><body>
-<h1>🐾 PetTech: จองนัดสัตวแพทย์</h1><p id="msg"></p>
-<section id="auth"><h3>เข้าสู่ระบบ / สมัครสมาชิก</h3>
-<input id="email" placeholder="อีเมล"><input id="pw" type="password" placeholder="รหัสผ่าน (6+ ตัว)">
-<button id="login">เข้าสู่ระบบ</button><button id="reg">สมัครสมาชิก</button></section>
-<div id="main" hidden>
-<section><h3>สัตว์เลี้ยงของฉัน</h3><ul id="pets"></ul>
-<input id="pname" placeholder="ชื่อ"><input id="pspecies" placeholder="ชนิด เช่น สุนัข"><button id="addpet">เพิ่ม</button></section>
-<section><h3>จองนัดหมาย</h3>
-<select id="petsel"></select><select id="svc"></select><input id="date" type="date">
-<div class="slots" id="slots"></div></section>
-<section><h3>นัดหมายของฉัน</h3><ul id="bks"></ul></section>
-<button id="logout">ออกจากระบบ</button></div>
+:root{
+  --bg:#eef6f3; --surface:#ffffff; --ink:#10302e; --muted:#5b7573; --line:#d5e4df;
+  --primary:#0e7c70; --primary-ink:#ffffff; --accent:#ffc93c; --accent-ink:#3d2f00;
+  --soft:#dff1ea; --danger:#c93d3d; --danger-bg:#fde8e8; --ok-bg:#dcf5e6; --ok:#17603a;
+  --shadow:0 10px 30px -12px rgba(16,48,46,.25);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c1f1e; --surface:#13302e; --ink:#e6f4f0; --muted:#93b3ae; --line:#24504b;
+    --primary:#3cc4b3; --primary-ink:#06231f; --accent:#ffc93c; --accent-ink:#3d2f00;
+    --soft:#17403c; --danger:#ff8a8a; --danger-bg:#4a2323; --ok-bg:#461d4b; --ok:#9fe6bc;
+    --shadow:0 10px 30px -12px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Prompt",system-ui,"Noto Sans Thai","Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;
+  background-image:radial-gradient(circle at 10% -10%,var(--soft),transparent 45%)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header{display:flex;align-items:center;justify-content:space-between;max-width:1040px;margin:0 auto;padding:18px 20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.25rem}
+.brand i{display:grid;place-items:center;width:40px;height:40px;border-radius:14px;background:var(--primary);color:var(--primary-ink);font-style:normal;font-size:1.3rem}
+main{max-width:1040px;margin:0 auto;padding:0 20px 60px}
+h1{font-size:clamp(1.9rem,5vw,2.9rem);line-height:1.2;margin:0 0 12px;font-weight:700}
+h2{font-size:1.15rem;margin:0 0 14px;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
+input,select,button{font:inherit;color:inherit}
+input,select{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);margin-top:6px}
+input:focus,select:focus{border-color:var(--primary);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 25%,transparent)}
+label{display:block;font-size:.9rem;font-weight:500;margin-top:14px}
+button{cursor:pointer;border:0;border-radius:12px;padding:11px 18px;font-weight:600;transition:transform .12s,background .15s}
+button:active{transform:scale(.97)}
+.btn{background:var(--primary);color:var(--primary-ink)}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.ghost:hover{background:var(--soft)}
+.btn.danger{background:var(--danger-bg);color:var(--danger);padding:7px 12px;font-size:.85rem}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.row.btns{margin-top:18px}
+
+/* toast */
+#msg{position:fixed;left:50%;top:16px;transform:translate(-50%,-140%);z-index:20;max-width:min(92vw,520px);padding:12px 18px;border-radius:14px;font-weight:500;box-shadow:var(--shadow);transition:transform .3s ease;border:1px solid transparent}
+#msg.show{transform:translate(-50%,0)}
+#msg.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+#msg.err{background:var(--danger-bg);color:var(--danger);border-color:var(--danger)}
+
+/* login screen */
+#auth{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center;padding-top:24px}
+#auth .lead{font-size:1.1rem;color:var(--muted);max-width:30ch}
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+.steps span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.9rem}
+.paws{font-size:3.4rem;letter-spacing:.2em;opacity:.9;margin-bottom:6px}
+
+/* dashboard */
+#main{display:grid;gap:20px;grid-template-columns:1.35fr 1fr;grid-template-areas:"book pets" "book mine";align-items:start}
+#main[hidden],#auth[hidden]{display:none}
+.a-book{grid-area:book}.a-pets{grid-area:pets}.a-mine{grid-area:mine}
+.pet{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:var(--bg);margin-bottom:8px}
+.pet b{display:block;font-weight:600}.pet small{color:var(--muted)}
+.avatar{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--soft);font-size:1.4rem}
+.addpet{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+
+/* time slots: the memorable element */
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin-top:16px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:0;padding:12px 6px;border-radius:16px;background:var(--bg);border:1.5px solid var(--line);font-size:1.25rem;font-weight:700;letter-spacing:.02em}
+.slot small{font-size:.72rem;font-weight:500;color:var(--primary)}
+.slot:hover:not(:disabled){background:var(--accent);color:var(--accent-ink);border-color:var(--accent);transform:translateY(-2px)}
+.slot:hover:not(:disabled) small{color:var(--accent-ink)}
+.slot:disabled{cursor:not-allowed;background:transparent;color:var(--muted);border-style:dashed;text-decoration:line-through;opacity:.7}
+.slot:disabled small{color:var(--muted);text-decoration:none}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:16px;margin-top:16px}
+
+/* my bookings */
+.bk{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:14px;background:var(--bg);margin-bottom:8px}
+.bk b{font-weight:600}.bk small{display:block;color:var(--muted)}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.78rem;font-weight:600;background:var(--ok-bg);color:var(--ok);margin-left:6px}
+.badge.cancelled{background:var(--line);color:var(--muted)}
+.bk.off{opacity:.6}
+
+@media (max-width:820px){
+  #auth{grid-template-columns:1fr}
+  #main{grid-template-columns:1fr;grid-template-areas:"pets" "book" "mine"}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><i>🐾</i> PetTech</div>
+  <button id="logout" class="btn ghost" hidden>ออกจากระบบ</button>
+</header>
+<div id="msg" role="status" aria-live="polite"></div>
+
+<main>
+  <!-- ยังไม่ได้เข้าสู่ระบบ -->
+  <section id="auth">
+    <div>
+      <div class="paws" aria-hidden="true">🐾🐾🐾</div>
+      <h1>จองคิวหมอให้น้อง<br>ได้ในไม่กี่คลิก</h1>
+      <p class="lead">เห็นเวลาว่างจริงของคลินิก เลือกแล้วจองได้ทันที ไม่ต้องรอแชทตอบกลับ</p>
+      <div class="steps"><span>1 สมัครสมาชิก</span><span>2 เพิ่มสัตว์เลี้ยง</span><span>3 เลือกเวลา</span></div>
+    </div>
+    <div class="card">
+      <h2>เข้าสู่ระบบหรือสมัครสมาชิก</h2>
+      <label for="email">อีเมล
+        <input id="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
+      <label for="pw">รหัสผ่าน
+        <input id="pw" type="password" autocomplete="current-password" placeholder="อย่างน้อย 6 ตัวอักษร"></label>
+      <div class="row btns">
+        <button id="login" class="btn">เข้าสู่ระบบ</button>
+        <button id="reg" class="btn ghost">สมัครสมาชิก</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- เข้าสู่ระบบแล้ว -->
+  <div id="main" hidden>
+    <section class="card a-pets">
+      <h2>สัตว์เลี้ยงของฉัน</h2>
+      <div id="pets"></div>
+      <div class="addpet">
+        <div class="row">
+          <label for="pname">ชื่อ<input id="pname" placeholder="เช่น มะม่วง"></label>
+          <label for="pspecies">ชนิด<input id="pspecies" placeholder="เช่น สุนัข"></label>
+        </div>
+        <div class="row btns"><button id="addpet" class="btn">เพิ่มสัตว์เลี้ยง</button></div>
+      </div>
+    </section>
+
+    <section class="card a-book">
+      <h2>จองนัดหมาย</h2>
+      <div class="row">
+        <label for="petsel">สัตว์เลี้ยง<select id="petsel"></select></label>
+        <label for="svc">บริการ<select id="svc"></select></label>
+      </div>
+      <label for="date">วันที่<input id="date" type="date"></label>
+      <div class="slots" id="slots"></div>
+    </section>
+
+    <section class="card a-mine">
+      <h2>นัดหมายของฉัน</h2>
+      <div id="bks"></div>
+    </section>
+  </div>
+</main>
+
 <script>
 let token=localStorage.getItem('t');const $=i=>document.getElementById(i);
-const say=(t,bad)=>{$('msg').textContent=t;$('msg').className=t?(bad?'err':'ok'):''};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let tt;const say=(t,bad)=>{const m=$('msg');m.textContent=t;m.className=t?(bad?'err show':'ok show'):'';clearTimeout(tt);if(t)tt=setTimeout(()=>{m.className=''},5500)};
 async function api(p,o={}){const r=await fetch('/api'+p,{...o,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})}});
 let d=null;try{d=await r.json()}catch(e){}if(!r.ok)throw{status:r.status,d};return d}
-const errText=e=>{const x=e.d&&e.d.detail;return typeof x==='string'?x:(x&&x.message)||(Array.isArray(x)?'ข้อมูลไม่ถูกต้อง':'เกิดข้อผิดพลาด')};
+const errText=e=>{const x=e.d&&e.d.detail;return typeof x==='string'?x:(x&&x.message)||(Array.isArray(x)?'ข้อมูลไม่ถูกต้อง กรุณาตรวจอีเมลและรหัสผ่าน':'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง')};
 const cred=()=>JSON.stringify({email:$('email').value,password:$('pw').value});
-$('reg').onclick=async()=>{try{await api('/register',{method:'POST',body:cred()});say('สมัครสำเร็จ กรุณาเข้าสู่ระบบ')}catch(e){say(errText(e),1)}};
+const ico=s=>/แมว|cat/i.test(s)?'🐱':/สุนัข|หมา|dog/i.test(s)?'🐶':/กระต่าย|rabbit/i.test(s)?'🐰':/นก|bird/i.test(s)?'🐦':'🐾';
+const fmt=iso=>new Date(iso).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
+
+$('reg').onclick=async()=>{try{await api('/register',{method:'POST',body:cred()});say('สมัครสำเร็จ กดเข้าสู่ระบบได้เลย')}catch(e){say(errText(e),1)}};
 $('login').onclick=async()=>{try{token=(await api('/login',{method:'POST',body:cred()})).token;localStorage.setItem('t',token);say('');init()}catch(e){say(errText(e),1)}};
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('login').click()});
 $('logout').onclick=()=>{token=null;localStorage.removeItem('t');location.reload()};
-async function loadPets(){const p=await api('/pets');$('pets').innerHTML=p.map(x=>`<li>${x.name} (${x.species})</li>`).join('')||'<li>ยังไม่มีสัตว์เลี้ยง</li>';
-$('petsel').innerHTML=p.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}
-$('addpet').onclick=async()=>{try{await api('/pets',{method:'POST',body:JSON.stringify({name:$('pname').value,species:$('pspecies').value})});$('pname').value='';loadPets()}catch(e){say(errText(e),1)}};
-async function loadSlots(){if(!$('date').value)return;const s=await api('/slots?date='+$('date').value);
-$('slots').innerHTML='';s.forEach(x=>{const b=document.createElement('button');b.textContent=x.time;b.disabled=!x.available;b.onclick=()=>book(x.time);$('slots').append(b)})}
-async function book(time){try{const r=await api('/bookings',{method:'POST',body:JSON.stringify({pet_id:+$('petsel').value,date:$('date').value,time,service:$('svc').value})});
-say('จองสำเร็จ รหัสนัดหมาย '+r.code)}catch(e){const d=e.d&&e.d.detail;say(e.status===409?`${d.message} ช่วงเวลาที่ว่าง: ${d.alternatives.join(', ')||'ไม่มี'}`:errText(e),1)}loadSlots();loadBks()}
-async function loadBks(){const b=await api('/bookings');$('bks').innerHTML=b.map(x=>`<li>${x.code} · ${x.pet} · ${x.service} · ${x.slot.replace('T',' ').slice(0,16)} · ${x.status}
-${x.status==='booked'?`<button onclick="cancelBk(${x.id})">ยกเลิก</button>`:''}</li>`).join('')||'<li>ยังไม่มีนัดหมาย</li>'}
-async function cancelBk(id){await api('/bookings/'+id,{method:'DELETE'});say('ยกเลิกนัดแล้ว');loadBks();loadSlots()}
+
+async function loadPets(){const p=await api('/pets');
+  $('pets').innerHTML=p.map(x=>`<div class="pet"><span class="avatar">${ico(x.species)}</span><div><b>${esc(x.name)}</b><small>${esc(x.species)}</small></div></div>`).join('')
+    ||'<div class="empty">ยังไม่มีสัตว์เลี้ยง เพิ่มตัวแรกด้านล่างได้เลย</div>';
+  $('petsel').innerHTML=p.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+$('addpet').onclick=async()=>{try{await api('/pets',{method:'POST',body:JSON.stringify({name:$('pname').value,species:$('pspecies').value})});$('pname').value='';$('pspecies').value='';say('เพิ่มสัตว์เลี้ยงแล้ว');loadPets()}catch(e){say(errText(e),1)}};
+
+async function loadSlots(){const box=$('slots');
+  if(!$('date').value){box.innerHTML='<div class="empty" style="grid-column:1/-1">เลือกวันที่เพื่อดูเวลาว่าง</div>';return}
+  const s=await api('/slots?date='+$('date').value);box.innerHTML='';
+  s.forEach(x=>{const b=document.createElement('button');b.className='slot';b.innerHTML=`${x.time}<small>${x.available?'ว่าง':'เต็ม'}</small>`;b.disabled=!x.available;b.onclick=()=>book(x.time);box.append(b)})}
+async function book(time){
+  if(!$('petsel').value){say('กรุณาเพิ่มสัตว์เลี้ยงก่อนจอง',1);return}
+  try{const r=await api('/bookings',{method:'POST',body:JSON.stringify({pet_id:+$('petsel').value,date:$('date').value,time,service:$('svc').value})});
+    say('จองสำเร็จ รหัสนัดหมาย '+r.code)}
+  catch(e){const d=e.d&&e.d.detail;say(e.status===409?`${d.message} ช่วงเวลาที่ว่าง: ${d.alternatives.join(', ')||'ไม่มี'}`:errText(e),1)}
+  loadSlots();loadBks()}
+async function loadBks(){const b=await api('/bookings');
+  $('bks').innerHTML=b.map(x=>`<div class="bk ${x.status==='booked'?'':'off'}"><div><b>${esc(x.pet)}</b><span class="badge ${x.status==='booked'?'':'cancelled'}">${x.status==='booked'?'นัดแล้ว':'ยกเลิก'}</span>
+    <small>${esc(x.service)} · ${fmt(x.slot)} · ${esc(x.code)}</small></div>
+    ${x.status==='booked'?`<button class="btn danger" onclick="cancelBk(${x.id})">ยกเลิกนัด</button>`:''}</div>`).join('')
+    ||'<div class="empty">ยังไม่มีนัดหมาย เลือกเวลาว่างด้านซ้ายเพื่อจองได้เลย</div>'}
+async function cancelBk(id){try{await api('/bookings/'+id,{method:'DELETE'});say('ยกเลิกนัดแล้ว');loadBks();loadSlots()}catch(e){say(errText(e),1)}}
+
 $('date').onchange=loadSlots;
-async function init(){if(!token)return;try{$('svc').innerHTML=(await api('/services')).map(s=>`<option>${s}</option>`).join('');
-await loadPets();await loadBks();$('auth').hidden=true;$('main').hidden=false}catch(e){token=null;localStorage.removeItem('t')}}
+async function init(){if(!token)return;
+  try{$('svc').innerHTML=(await api('/services')).map(s=>`<option>${esc(s)}</option>`).join('');
+    await loadPets();await loadBks();
+    const d=new Date();d.setDate(d.getDate()+1);const iso=d.toLocaleDateString('sv-SE');
+    $('date').min=new Date().toLocaleDateString('sv-SE');$('date').value=iso;await loadSlots();
+    $('auth').hidden=true;$('main').hidden=false;$('logout').hidden=false}
+  catch(e){token=null;localStorage.removeItem('t')}}
 init();
-</script></body></html>
+</script>
+</body>
+</html>
